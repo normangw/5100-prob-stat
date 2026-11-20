@@ -27,12 +27,12 @@ uv run jupyter lab                        # notebooks/
 
 Pipeline: `data/raw` (immutable) -> `src/blackjack_take/data` (load/clean, HHI) -> `data/interim|processed` (gitignored) -> `stats` and `ts` -> `reports/{figures,tables}`. Notebooks in `notebooks/` call the package; logic lives in `src/`, not notebooks.
 
-- `config.py` is the single place for sheet names, areas, shock/period windows, alpha, seed, permutation count. Blackjack-only workbook, CPI and area mappings (`BJ_SHEETS`, `LEAF_AREAS`) live here.
+- `config.py` is the single place for sheet-to-area map, shock/period windows, alpha, seed, permutation count. Blackjack-only workbook, CPI and area mappings (`BJ_SHEETS`, `LEAF_AREAS`) live here.
 - `stats/assumptions.py` returns `AssumptionReport` objects; `stats/hypothesis.py` (H1-H3) and `ts/diagnostics.py` run them before computing and return them alongside results. Keep that coupling.
 
 ## Data (data/raw)
 
-Primary: `Copy of Device Summary 1995 to 09.30.26 - NWang 11.19.26.xlsx` (NGCB TL040, **blackjack only**, "001 - Twenty One"). One sheet per area (Statewide + 21), header on row 2: `Period` (`MM/YYYY`), `Count` (games), `Drop`, `Win`; monthly 01/1995-09/2026. Load with `data.load.load_blackjack()`. The old `1 - EXTRACT DATA BY AREA` workbook is a combined Game & Table proxy, kept only as legacy (`load_take`).
+Primary: `Copy of Device Summary 1995 to 09.30.26 - NWang 11.19.26.xlsx` (NGCB TL040, **blackjack only**, "001 - Twenty One"). One sheet per area (Statewide + 21), header on row 2: `Period` (`MM/YYYY`), `Count` (games), `Drop`, `Win`; monthly 01/1995-09/2026. Load with `data.load.load_blackjack()`.
 
 - **Closure zeros:** Apr-May 2020 have Count = 0 everywhere. The loader sets them to NaN and flags `closed`; never treat them as zero take.
 - **Gaps:** Mesquite (379 rows) and Churchill (334, ends 2025-01) are missing months. The loader reindexes to a full grid so they are explicit NaN.

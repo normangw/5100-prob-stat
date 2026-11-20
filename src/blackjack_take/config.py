@@ -3,7 +3,6 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-RAW_XLSX = ROOT / "data" / "raw" / "1 - EXTRACT DATA BY AREA - Sept 2026 (external).xlsx"
 
 # Blackjack-only ("001 - Twenty One") NGCB report TL040, one sheet per area, Count/Drop/Win monthly.
 BJ_XLSX = ROOT / "data" / "raw" / "Copy of Device Summary 1995 to 09.30.26 - NWang 11.19.26.xlsx"
@@ -44,25 +43,7 @@ PARENT_AREAS = ["Statewide", "Clark County", "Washoe County", "Elko County", "Do
 LEAF_AREAS = [a for a in BJ_SHEETS.values() if a not in PARENT_AREAS]
 MIN_MEDIAN_GAMES = 20  # drop areas whose median monthly game count is smaller (too noisy)
 
-# NGCB workbook has only combined Game & Table data (no blackjack-only sheet) until NGCB
-# supplies one. Swap these names when blackjack-only data arrives.
-WIN_PER_UNIT_PER_DAY_SHEET = "Win per Game & Table per Day"
-GAME_COUNT_SHEET = "Game Count"
-WIN_SHEET = "Game & Table Win"
-
-HEADER_ROW = 3  # 1-indexed; row 1 is a title, row 2 holds the "Bal. of Clark" label overflow
-AREAS = [
-    "Statewide",
-    "Clark County",
-    "Downtown Las Vegas",
-    "Las Vegas Strip",
-    "North Las Vegas",
-    "Laughlin",
-    "Boulder Strip",
-    "Mesquite",
-    "Bal. of Clark County",
-]
-START, END = "2000-01-01", "2026-12-31"
+START = "2000-01-01"  # headline comparisons start here; BJ_SERIES_START is the data start
 
 # (label, start, end) -- inclusive month ranges for H1 and perspective comparisons
 SHOCKS = [("GFC", "2008-01-01", "2009-12-31"), ("COVID", "2020-03-01", "2020-12-31")]
