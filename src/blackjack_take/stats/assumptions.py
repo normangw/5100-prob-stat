@@ -1,4 +1,5 @@
 """Assumption checks that gate every test/model. Mirrors docs/references/stats-test-cheatsheet.html §3."""
+
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -46,7 +47,11 @@ def normality(x, label: str = "values", alpha: float = config.ALPHA) -> Check:
     x = x[~np.isnan(x)]
     n = len(x)
     stat, p = stats.shapiro(x[:5000])
-    note = "n>5000 truncated; rely on Q-Q + CLT" if n > 5000 else ("large n: CLT usually ok" if n > 200 else "")
+    note = (
+        "n>5000 truncated; rely on Q-Q + CLT"
+        if n > 5000
+        else ("large n: CLT usually ok" if n > 200 else "")
+    )
     return Check(f"normality({label})", float(stat), float(p), p > alpha, note)
 
 
@@ -75,7 +80,9 @@ def independence_ljung_box(resid, lags: int = 12, alpha: float = config.ALPHA) -
     r = r[~np.isnan(r)]
     out = acorr_ljungbox(r, lags=[min(lags, len(r) // 2 - 1)])
     return Check(
-        "independence(ljung-box)", float(out["lb_stat"].iloc[0]), float(out["lb_pvalue"].iloc[0]),
+        "independence(ljung-box)",
+        float(out["lb_stat"].iloc[0]),
+        float(out["lb_pvalue"].iloc[0]),
         float(out["lb_pvalue"].iloc[0]) > alpha,
     )
 

@@ -1,4 +1,5 @@
 """Herfindahl-Hirschman Index. Needs the ownership dataset (not yet built)."""
+
 import pandas as pd
 
 

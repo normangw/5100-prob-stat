@@ -1,4 +1,5 @@
 """Time-series checks. Stationarity must be established before ARIMA or any regression on levels."""
+
 import numpy as np
 import pandas as pd
 from statsmodels.stats.diagnostic import acorr_ljungbox, het_arch
@@ -15,9 +16,18 @@ def stationarity(y: pd.Series, alpha: float = config.ALPHA) -> AssumptionReport:
     adf_p = adfuller(y, autolag="AIC")[1]
     kpss_p = kpss(y, regression="c", nlags="auto")[1]
     rep = AssumptionReport()
-    rep.add(Check("stationary(adf)", float(adfuller(y, autolag="AIC")[0]), float(adf_p), adf_p < alpha))
-    rep.add(Check("stationary(kpss)", float(kpss(y, regression="c", nlags="auto")[0]),
-                  float(kpss_p), kpss_p > alpha, "p is clipped to [0.01, 0.1] by statsmodels"))
+    rep.add(
+        Check("stationary(adf)", float(adfuller(y, autolag="AIC")[0]), float(adf_p), adf_p < alpha)
+    )
+    rep.add(
+        Check(
+            "stationary(kpss)",
+            float(kpss(y, regression="c", nlags="auto")[0]),
+            float(kpss_p),
+            kpss_p > alpha,
+            "p is clipped to [0.01, 0.1] by statsmodels",
+        )
+    )
     return rep
 
 
@@ -31,10 +41,23 @@ def residual_diagnostics(resid, lags: int = 24, alpha: float = config.ALPHA) -> 
     lb = acorr_ljungbox(r, lags=[lags])
     arch_p = het_arch(r)[1]
     rep = AssumptionReport()
-    rep.add(Check("residual_whiteness(ljung-box)", float(lb["lb_stat"].iloc[0]),
-                  float(lb["lb_pvalue"].iloc[0]), float(lb["lb_pvalue"].iloc[0]) > alpha))
+    rep.add(
+        Check(
+            "residual_whiteness(ljung-box)",
+            float(lb["lb_stat"].iloc[0]),
+            float(lb["lb_pvalue"].iloc[0]),
+            float(lb["lb_pvalue"].iloc[0]) > alpha,
+        )
+    )
     rep.add(normality(r, "residuals"))
-    rep.add(Check("residual_homoskedasticity(arch-lm)", float(het_arch(r)[0]), float(arch_p), arch_p > alpha))
+    rep.add(
+        Check(
+            "residual_homoskedasticity(arch-lm)",
+            float(het_arch(r)[0]),
+            float(arch_p),
+            arch_p > alpha,
+        )
+    )
     return rep
 
 
@@ -49,14 +72,15 @@ def fit_sarima_pre_shock(y: pd.Series, cutoff: str, order=(1, 1, 1), seasonal=(0
     train, test = y[y.index < cutoff].dropna(), y[y.index >= cutoff]
     fit = SARIMAX(train, order=order, seasonal_order=seasonal).fit(disp=False)
     fc = fit.get_forecast(len(test)).summary_frame()
-    return fit, fc, residual_diagnostics(fit.resid.iloc[max(order[1], seasonal[1] * seasonal[3]):])
+    return fit, fc, residual_diagnostics(fit.resid.iloc[max(order[1], seasonal[1] * seasonal[3]) :])
 
 
 def cross_correlation(x: pd.Series, y: pd.Series, max_lag: int = 12) -> pd.Series:
     """corr(x_{t-k}, y_t). Inputs must be stationary (difference first) or results are spurious."""
     d = pd.concat([x, y], axis=1).dropna()
-    return pd.Series({k: d.iloc[:, 0].shift(k).corr(d.iloc[:, 1]) for k in range(max_lag + 1)},
-                     name="ccf").rename_axis("lag")
+    return pd.Series(
+        {k: d.iloc[:, 0].shift(k).corr(d.iloc[:, 1]) for k in range(max_lag + 1)}, name="ccf"
+    ).rename_axis("lag")
 
 
 def detect_breaks(y: pd.Series, n_bkps: int = 2):

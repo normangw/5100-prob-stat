@@ -1,4 +1,5 @@
 """H1-H3. Every function runs assumption checks first and returns them with the result."""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -34,14 +35,23 @@ def h1_two_groups(shock, other) -> TestResult:
     mw = stats.mannwhitneyu(shock, other, alternative="less")
     sp = np.sqrt((shock.var(ddof=1) + other.var(ddof=1)) / 2)
     d = (shock.mean() - other.mean()) / sp  # Cohen's d (pooled-SD form)
-    normal_ok = all(c.passed for c in rep.checks if c.name.startswith("normality")) or min(
-        len(shock), len(other)
-    ) > 200
+    normal_ok = (
+        all(c.passed for c in rep.checks if c.name.startswith("normality"))
+        or min(len(shock), len(other)) > 200
+    )
     primary = "welch_t" if normal_ok else "mann_whitney_u"
     stat, p = (welch.statistic, welch.pvalue) if normal_ok else (mw.statistic, mw.pvalue)
-    return TestResult("H1", primary, float(stat), float(p), float(d), "cohen_d",
-                      {"welch_t": float(welch.pvalue), "mann_whitney_u": float(mw.pvalue)},
-                      rep, {"shock": len(shock), "other": len(other)})
+    return TestResult(
+        "H1",
+        primary,
+        float(stat),
+        float(p),
+        float(d),
+        "cohen_d",
+        {"welch_t": float(welch.pvalue), "mann_whitney_u": float(mw.pvalue)},
+        rep,
+        {"shock": len(shock), "other": len(other)},
+    )
 
 
 def h2_permutation(high, low, n_perm: int = config.N_PERM, seed: int = config.SEED) -> TestResult:
@@ -58,11 +68,20 @@ def h2_permutation(high, low, n_perm: int = config.N_PERM, seed: int = config.SE
     cnt = 0
     for _ in range(n_perm):
         rng.shuffle(pooled)
-        cnt += (pooled[: len(high)].mean() - pooled[len(high):].mean()) >= obs
+        cnt += (pooled[: len(high)].mean() - pooled[len(high) :].mean()) >= obs
     p = (cnt + 1) / (n_perm + 1)
     sp = np.sqrt((high.var(ddof=1) + low.var(ddof=1)) / 2)
-    return TestResult("H2", "permutation_mean_diff", float(obs), float(p), float(obs / sp),
-                      "cohen_d", {}, rep, {"high": len(high), "low": len(low)})
+    return TestResult(
+        "H2",
+        "permutation_mean_diff",
+        float(obs),
+        float(p),
+        float(obs / sp),
+        "cohen_d",
+        {},
+        rep,
+        {"high": len(high), "low": len(low)},
+    )
 
 
 def h3_anova(groups: dict[str, np.ndarray]) -> TestResult:
@@ -82,6 +101,14 @@ def h3_anova(groups: dict[str, np.ndarray]) -> TestResult:
         primary, stat, p = "one_way_anova", f.statistic, f.pvalue
     else:
         primary, stat, p = "kruskal_wallis", kw.statistic, kw.pvalue
-    return TestResult("H3", primary, float(stat), float(p), float(eta2), "eta_squared",
-                      {"one_way_anova": float(f.pvalue), "kruskal_wallis": float(kw.pvalue)},
-                      rep, {k: len(v) for k, v in groups.items()})
+    return TestResult(
+        "H3",
+        primary,
+        float(stat),
+        float(p),
+        float(eta2),
+        "eta_squared",
+        {"one_way_anova": float(f.pvalue), "kruskal_wallis": float(kw.pvalue)},
+        rep,
+        {k: len(v) for k, v in groups.items()},
+    )

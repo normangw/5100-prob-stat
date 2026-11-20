@@ -27,16 +27,21 @@ uv run jupyter lab                        # notebooks/
 
 Pipeline: `data/raw` (immutable) -> `src/blackjack_take/data` (load/clean, HHI) -> `data/interim|processed` (gitignored) -> `stats` and `ts` -> `reports/{figures,tables}`. Notebooks in `notebooks/` call the package; logic lives in `src/`, not notebooks.
 
-- `config.py` is the single place for sheet names, areas, shock/period windows, alpha, seed, permutation count. Swap the series here when blackjack-only data arrives.
+- `config.py` is the single place for sheet names, areas, shock/period windows, alpha, seed, permutation count. Blackjack-only workbook, CPI and area mappings (`BJ_SHEETS`, `LEAF_AREAS`) live here.
 - `stats/assumptions.py` returns `AssumptionReport` objects; `stats/hypothesis.py` (H1-H3) and `ts/diagnostics.py` run them before computing and return them alongside results. Keep that coupling.
 
-## Data quirks (NGCB workbook, `data/raw/1 - EXTRACT DATA BY AREA - Sept 2026 (external).xlsx`)
+## Data (data/raw)
 
-- **Not blackjack-only.** Sheets are combined Game & Table (win, drop, counts, per-day). The proposal's blackjack series does not exist yet; the pipeline uses "Win per Game & Table per Day" as a proxy. A data request to NGCB for blackjack-only data is pending. Label any proxy result as such.
-- Data starts 1983-04; filter to 2000+ (`config.START`). Areas are Statewide, Clark County, Downtown LV, Strip, North LV, Laughlin, Boulder Strip, Mesquite, Bal. of Clark. **No Reno/Washoe.**
-- Header is on row 3 (title row 1; the "Bal. of Clark County" label is split across rows 2-3). Some cells are `'#DIV/0!'` strings (coerce to NaN). Slot Coin-In, Slot Win %, Coin-in per Slot (per Day), Sheet1, Sheet2 are empty. Sheet "Win per Game & Table per Day" has title "WIN PER GAME & TABLE" same as the non-daily sheet: verify scale (daily values are in the hundreds, non-daily in the tens of thousands).
-- Ownership/HHI, LVCVA visitor and FRED unemployment data are not in the repo yet. `data/hhi.py` is ready; ownership mapping is Norman's task.
-- Monthly series: nominal dollars, not inflation-adjusted. Decide and document deflation before long-run comparisons.
+Primary: `Copy of Device Summary 1995 to 09.30.26 - NWang 11.19.26.xlsx` (NGCB TL040, **blackjack only**, "001 - Twenty One"). One sheet per area (Statewide + 21), header on row 2: `Period` (`MM/YYYY`), `Count` (games), `Drop`, `Win`; monthly 01/1995-09/2026. Load with `data.load.load_blackjack()`. The old `1 - EXTRACT DATA BY AREA` workbook is a combined Game & Table proxy, kept only as legacy (`load_take`).
+
+- **Closure zeros:** Apr-May 2020 have Count = 0 everywhere. The loader sets them to NaN and flags `closed`; never treat them as zero take.
+- **Gaps:** Mesquite (379 rows) and Churchill (334, ends 2025-01) are missing months. The loader reindexes to a full grid so they are explicit NaN.
+- **Hierarchy (verified exact):** Clark = Bal. of Clark + Downtown + Strip + North LV + Laughlin + Boulder + Mesquite. Washoe = Bal. + Reno + Sparks + North Shore LT. Elko County = Bal. + Wendover. South Shore LT sits inside Douglas. Never mix a parent with its child in ANOVA/permutation: use `config.LEAF_AREAS` (via `eligible_leaf_areas`, median games >= `MIN_MEDIAN_GAMES`).
+- **Derived:** `win_per_game_per_day = Win / Count / days_in_month`; `hold = Win/Drop`. No per-day column in the source.
+- **Real dollars:** `data/raw/CPIAUCSL.csv` (FRED CPI-U SA, national, proxy for NV prices). Oct 2025 CPI was never published (shutdown) and is interpolated. `real_win_per_game_per_day` is in `config.CPI_BASE` prices; use it for long-run comparisons and report nominal as a check. In real terms the post-2021 jump is mostly inflation (about 1,700 in 2008, 2025 and 2026).
+- Game count fell from about 3,300 (1990s) to about 1,900, so the take per game also moves with supply. Hold % is the supply-robust check.
+- Ownership/HHI, LVCVA visitors (and optional FRED `NVUR` unemployment) are not in the repo yet. `data/hhi.py` is ready; ownership mapping is Norman's task. Unemployment only feeds the cross-correlation step, not H1-H3.
+- Monthly observations are autocorrelated: use `period_means()` (one value per area/period) for area-level tests.
 
 ## Statistical rigor policy (applies to ALL tests, ANOVA, regressions, and time-series models)
 
